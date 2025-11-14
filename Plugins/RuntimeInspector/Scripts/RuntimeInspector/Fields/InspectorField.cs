@@ -134,8 +134,17 @@ namespace RuntimeInspectorNamespace
 			set { if( variableNameText ) variableNameText.text = value; }
 		}
 
+		private string tooltipTextOverride;
+
+		public string TooltipTextOverride
+		{
+			get { return tooltipTextOverride; }
+			set { tooltipTextOverride = value; }
+		}
+
 		bool ITooltipContent.IsActive { get { return this && gameObject.activeSelf; } }
-		string ITooltipContent.TooltipText { get { return NameRaw; } }
+		string ITooltipContent.TooltipText
+			=> string.IsNullOrEmpty(tooltipTextOverride) ? NameRaw : tooltipTextOverride;
 
 		public virtual bool ShouldRefresh { get { return m_isVisible; } }
 
@@ -339,6 +348,7 @@ namespace RuntimeInspectorNamespace
 			Setter<TBinding> setter,
 			MemberInfo variable = null)
 		{
+			TooltipTextOverride = null;
 			m_boundVariableType = variableType;
 			Name = variableName;
 
