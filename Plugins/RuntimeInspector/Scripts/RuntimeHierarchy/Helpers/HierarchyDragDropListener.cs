@@ -163,7 +163,16 @@ namespace RuntimeInspectorNamespace
 				// Dropped Transform(s) onto the blank space at the bottom of the Hierarchy
 				for( int i = 0; i < droppedTransforms.Length; i++ )
 				{
-					if( droppedTransforms[i].parent != null )
+					// iVP: route to the scene's content root instead of re-rooting, so the
+					// object stays a non-root transform (reorderable at runtime in builds).
+					Transform contentRoot = RuntimeInspectorUtils.GetSceneContentRoot( droppedTransforms[i].gameObject.scene );
+					if( contentRoot )
+					{
+						droppedTransforms[i].SetParent( contentRoot, true );
+						droppedTransforms[i].SetAsLastSibling();
+						shouldFocusObjectInHierarchy = true;
+					}
+					else if( droppedTransforms[i].parent != null )
 					{
 						droppedTransforms[i].SetParent( null, true );
 						shouldFocusObjectInHierarchy = true;
@@ -377,19 +386,36 @@ namespace RuntimeInspectorNamespace
 				}
 				else if( newScene is HierarchyDataRootScene )
 				{
-					if( droppedTransform.parent != null )
-						droppedTransform.SetParent( null, true );
-
-					// Change dropped object's scene
 					Scene scene = ( (HierarchyDataRootScene) newScene ).Scene;
-					if( droppedTransform.gameObject.scene != scene )
-						SceneManager.MoveGameObjectToScene( droppedTransform.gameObject, scene );
-
-					if( newSiblingIndex < 0 )
+					Transform contentRoot = RuntimeInspectorUtils.GetSceneContentRoot( scene );
+					if( contentRoot )
 					{
-						// If object was dropped onto the scene, add it to the bottom of the scene
-						newSiblingIndex = scene.rootCount + 1;
-						shouldFocusObjectInHierarchy = true;
+						// iVP: keep the object under the content root (non-root) so that
+						// sibling-index ordering keeps working at runtime in builds.
+						if( droppedTransform.parent != contentRoot )
+							droppedTransform.SetParent( contentRoot, true );
+
+						if( newSiblingIndex < 0 )
+						{
+							newSiblingIndex = contentRoot.childCount;
+							shouldFocusObjectInHierarchy = true;
+						}
+					}
+					else
+					{
+						if( droppedTransform.parent != null )
+							droppedTransform.SetParent( null, true );
+
+						// Change dropped object's scene
+						if( droppedTransform.gameObject.scene != scene )
+							SceneManager.MoveGameObjectToScene( droppedTransform.gameObject, scene );
+
+						if( newSiblingIndex < 0 )
+						{
+							// If object was dropped onto the scene, add it to the bottom of the scene
+							newSiblingIndex = scene.rootCount + 1;
+							shouldFocusObjectInHierarchy = true;
+						}
 					}
 				}
 			}

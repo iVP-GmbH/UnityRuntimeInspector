@@ -211,7 +211,7 @@ namespace RuntimeInspectorNamespace
 			return children[max].FindDataAtIndex( index - 1 - children[max].m_index );
 		}
 
-		public HierarchyDataTransform FindTransform( Transform target, Transform nextInPath = null )
+		public virtual HierarchyDataTransform FindTransform( Transform target, Transform nextInPath = null )
 		{
 			if( m_depth < 0 ) // This object is hidden from Hierarchy
 				return null;

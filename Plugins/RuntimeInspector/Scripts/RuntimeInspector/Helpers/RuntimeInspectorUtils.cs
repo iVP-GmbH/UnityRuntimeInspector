@@ -25,6 +25,34 @@ namespace RuntimeInspectorNamespace
 		private static readonly Dictionary<Type, MemberInfo[]> typeToVariables = new Dictionary<Type, MemberInfo[]>( 89 ) { { typeof( object ), null } };
 		private static readonly Dictionary<Type, ExposedMethod[]> typeToExposedMethods = new Dictionary<Type, ExposedMethod[]>( 89 );
 
+		#region Scene Content Roots (iVP)
+		// Optional per-scene "content root". When a scene has one registered, the
+		// scene's visible top level in the RuntimeHierarchy is the content root's
+		// children instead of the scene's root objects. This keeps top-level
+		// objects as NON-root transforms, so they can be reordered via
+		// SetSiblingIndex at runtime in builds (scene roots can not).
+		private static readonly Dictionary<Scene, Transform> sceneContentRoots = new Dictionary<Scene, Transform>();
+
+		public static void RegisterSceneContentRoot( Scene scene, Transform contentRoot )
+		{
+			if( contentRoot )
+				sceneContentRoots[scene] = contentRoot;
+		}
+
+		public static void UnregisterSceneContentRoot( Scene scene )
+		{
+			sceneContentRoots.Remove( scene );
+		}
+
+		public static Transform GetSceneContentRoot( Scene scene )
+		{
+			if( sceneContentRoots.TryGetValue( scene, out Transform contentRoot ) && contentRoot )
+				return contentRoot;
+
+			return null;
+		}
+		#endregion
+
 		private static readonly HashSet<Type> commonSerializableTypes = new HashSet<Type>()
 		{
 			typeof( string ), typeof( Vector4 ), typeof( Vector3 ), typeof( Vector2 ), typeof( Rect ),
