@@ -153,6 +153,13 @@ namespace RuntimeInspectorNamespace
 			if( droppedTransforms.Length > 1 )
 				System.Array.Sort( droppedTransforms, ( transform1, transform2 ) => CompareHierarchySiblingIndices( transform1, transform2 ) );
 
+			// iVP: snapshot the pre-drop parent + sibling index of every dragged Transform
+			// so the resulting reparent/reorder can be recorded as a single undo step
+			// (see the OnReparentDrop hook called at the end of a successful drop).
+			var reparentBefore = new System.Collections.Generic.List<(Transform item, Transform oldParent, int oldIndex)>( droppedTransforms.Length );
+			for( int i = 0; i < droppedTransforms.Length; i++ )
+				reparentBefore.Add( ( droppedTransforms[i], droppedTransforms[i].parent, droppedTransforms[i].GetSiblingIndex() ) );
+
 			bool shouldFocusObjectInHierarchy = false;
 
 			float contentYPos = pointerLastYPos + content.anchoredPosition.y;
@@ -285,6 +292,10 @@ namespace RuntimeInspectorNamespace
 					return;
 			}
 
+			// iVP: a successful drop reparented/reordered the dragged Transforms —
+			// notify so it can be recorded as a single undo step.
+			OnReparentDrop( reparentBefore );
+
 			// Don't reveal the selection unless it's necessary (i.e. selection is already fully visible)
 			if( shouldFocusObjectInHierarchy )
 			{
@@ -296,6 +307,15 @@ namespace RuntimeInspectorNamespace
 			else
 				hierarchy.Refresh();
 		}
+
+		// iVP: hook for recording a hierarchy drop (reparent/reorder) as undo,
+		// overridden by HierarchyDragDropListenerAdapter. Carries each dragged
+		// Transform's PRE-drop parent + sibling index; the override reads the
+		// post-drop state itself and diffs. Called only after a drop that moved
+		// something, so there is no persistent capture to go stale.
+		protected virtual void OnReparentDrop(
+			System.Collections.Generic.List<(Transform item, Transform oldParent, int oldIndex)> before )
+		{ }
 
 		private bool DropTransformOnto( Transform droppedTransform, HierarchyData target, HierarchyDataRoot newScene, Transform newParent, int newSiblingIndex, out bool decrementSiblingIndex, out bool shouldFocusObjectInHierarchy )
 		{
