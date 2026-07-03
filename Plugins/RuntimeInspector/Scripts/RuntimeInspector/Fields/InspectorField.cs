@@ -500,7 +500,11 @@ namespace RuntimeInspectorNamespace
 					expandArrow.rectTransform.localEulerAngles = m_isExpanded ? new Vector3( 0f, 0f, -90f ) : Vector3.zero;
 
 				if( m_isExpanded )
+				{
+					UnityEngine.Profiling.Profiler.BeginSample( "RI.ExpandRefresh" );
 					Refresh();
+					UnityEngine.Profiling.Profiler.EndSample();
+				}
 			}
 		}
 
@@ -642,10 +646,12 @@ namespace RuntimeInspectorNamespace
 
 			if( Depth < Inspector.NestLimit )
 			{
+				UnityEngine.Profiling.Profiler.BeginSample( GetType().Name + ".GenerateElements" );
 				drawArea.gameObject.SetActive( true );
 				GenerateElements();
 				GenerateExposedMethodButtons();
 				drawArea.gameObject.SetActive( m_isExpanded );
+				UnityEngine.Profiling.Profiler.EndSample();
 			}
 		}
 
@@ -703,18 +709,22 @@ namespace RuntimeInspectorNamespace
 
 		public override void Refresh()
 		{
+			UnityEngine.Profiling.Profiler.BeginSample( "RI.RefreshValue" );
 			base.Refresh();
+			UnityEngine.Profiling.Profiler.EndSample();
 
 			if( m_isExpanded )
 			{
 				if( Length != elements.Count )
 					RegenerateElements();
 
+				UnityEngine.Profiling.Profiler.BeginSample( "RI.RefreshChildren" );
 				for( int i = 0; i < elements.Count; i++ )
 				{
 					if( elements[i].ShouldRefresh )
 						elements[i].Refresh();
 				}
+				UnityEngine.Profiling.Profiler.EndSample();
 			}
 		}
 
@@ -851,12 +861,14 @@ namespace RuntimeInspectorNamespace
 			MemberInfo variable = null,
 			bool drawObjectsAsFields = true)
 		{
+			UnityEngine.Profiling.Profiler.BeginSample( "RI.ResolveDrawer" );
 			InspectorField drawer = Inspector.CreateDrawerForType(
 					type: variableType,
 					drawerParent: drawArea,
 					depth: Depth + 1,
 					drawObjectsAsFields: drawObjectsAsFields,
 					variable: variable);
+			UnityEngine.Profiling.Profiler.EndSample();
 
 			if( drawer == null )
 				return null;
@@ -866,6 +878,7 @@ namespace RuntimeInspectorNamespace
 			else
 				drawer.NameRaw = variableName;
 
+			UnityEngine.Profiling.Profiler.BeginSample( "RI.BindDrawer" );
 			if( drawer is InspectorField<TChild> )
 				( (InspectorField<TChild>) drawer ).BindTo(
 						variableType: variableType,
@@ -877,6 +890,7 @@ namespace RuntimeInspectorNamespace
 				// If there is no inspector field taking values of the correct type
 				// directly, we use the overload that casts.
 				drawer.BindTo( variableType, variableName, getter, setter, variable );
+			UnityEngine.Profiling.Profiler.EndSample();
 
 			if (!IsInteractable)
 				drawer.IsInteractable = false;

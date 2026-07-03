@@ -63,9 +63,16 @@ namespace RuntimeInspectorNamespace
 
 			initializeObjectButton.gameObject.SetActive( false );
 
+			UnityEngine.Profiling.Profiler.BeginSample( "ObjectField.GetCustomEditor" );
 			customEditor = RuntimeInspectorUtils.GetCustomEditor( m_boundCommonBaseType );
+			UnityEngine.Profiling.Profiler.EndSample();
+
 			if( customEditor != null )
+			{
+				UnityEngine.Profiling.Profiler.BeginSample( customEditor.GetType().Name );
 				customEditor.GenerateElements( this );
+				UnityEngine.Profiling.Profiler.EndSample();
+			}
 			else
 				CreateDrawersForVariables();
 		}

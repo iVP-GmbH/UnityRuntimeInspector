@@ -209,6 +209,15 @@ namespace RuntimeInspectorNamespace
 
 		private static int aliveInspectors = 0;
 
+		// Coarse phase markers so full-rebuild spikes can be attributed
+		// without deep profiling.
+		private static readonly Unity.Profiling.ProfilerMarker stopInspectMarker
+			= new Unity.Profiling.ProfilerMarker( "RuntimeInspector.StopInspect" );
+		private static readonly Unity.Profiling.ProfilerMarker buildDrawersMarker
+			= new Unity.Profiling.ProfilerMarker( "RuntimeInspector.BuildDrawers" );
+		private static readonly Unity.Profiling.ProfilerMarker hierarchySyncMarker
+			= new Unity.Profiling.ProfilerMarker( "RuntimeInspector.HierarchySync" );
+
 		private bool initialized = false;
 
 		private readonly Dictionary<Type, InspectorField[]> typeToDrawers = new Dictionary<Type, InspectorField[]>( 89 );
@@ -456,7 +465,8 @@ namespace RuntimeInspectorNamespace
 					return;
 			}
 
-			StopInspectInternal();
+			using( stopInspectMarker.Auto() )
+				StopInspectInternal();
 
 			inspectLock = true;
 			try
@@ -472,7 +482,10 @@ namespace RuntimeInspectorNamespace
 				else
 					elemType = elemType.GetGenericArguments()[0];
 
+				buildDrawersMarker.Begin();
 				InspectorField inspectedObjectDrawer = CreateDrawerForType( elemType, drawArea, 0, false );
+				if( inspectedObjectDrawer == null )
+					buildDrawersMarker.End();
 				if( inspectedObjectDrawer != null )
 				{
 					inspectedObjectDrawer.BindTo(
@@ -489,9 +502,12 @@ namespace RuntimeInspectorNamespace
 					currentDrawer = inspectedObjectDrawer;
 					if( currentDrawer is IExpandableInspectorField )
 						( (IExpandableInspectorField) currentDrawer ).HeaderVisibility = m_inspectedObjectHeaderVisibility;
+					buildDrawersMarker.End();
 
 					if( ConnectedHierarchy )
 					{
+						using( hierarchySyncMarker.Auto() )
+						{
 						bool success = true;
 						var options = RuntimeHierarchy.SelectOptions.FocusOnSelection;
 
@@ -513,6 +529,7 @@ namespace RuntimeInspectorNamespace
 
 						if( !success )
 							ConnectedHierarchy.Deselect();
+						}
 					}
 				}
 				else

@@ -1129,6 +1129,19 @@ namespace RuntimeInspectorNamespace
 			}
 		}
 
+		// Only assemblies whose name starts with one of these prefixes are
+		// scanned for [RuntimeInspectorCustomEditor] types. The previous
+		// blacklist walked EVERY loaded assembly and reflected over every
+		// exported type — in the editor that is tens of thousands of
+		// attribute lookups and took seconds on the first inspect of a
+		// session. All custom editors live in the iVP assemblies; extend this
+		// list (before the first Inspect) if editors are added elsewhere.
+		public static string[] CustomEditorAssemblyPrefixes = new string[]
+		{
+			"iVP",
+			"Assembly-CSharp",
+		};
+
 		public static IRuntimeInspectorCustomEditor GetCustomEditor( Type type )
 		{
 			if( customEditors == null )
@@ -1136,30 +1149,7 @@ namespace RuntimeInspectorNamespace
 				customEditors = new Dictionary<Type, Type>( 89 );
 
 #if UNITY_EDITOR || !NETFX_CORE
-				// Search all assemblies for RuntimeInspectorCustomEditor attributes
-				// Don't search built-in assemblies for custom editors since they can't have any
-				string[] ignoredAssemblies = new string[]
-				{
-					"Unity",
-					"System",
-					"Mono.",
-					"mscorlib",
-					"netstandard",
-					"TextMeshPro",
-					"Microsoft.GeneratedCode",
-					"I18N",
-					"Boo.",
-					"UnityScript.",
-					"ICSharpCode.",
-					"ExCSS.Unity",
-#if UNITY_EDITOR
-					"Assembly-CSharp-Editor",
-					"Assembly-UnityScript-Editor",
-					"nunit.",
-					"SyntaxTree.",
-					"AssetStoreTools",
-#endif
-				};
+				string[] searchedAssemblies = CustomEditorAssemblyPrefixes;
 
 				CompareInfo caseInsensitiveComparer = new CultureInfo( "en-US" ).CompareInfo;
 
@@ -1171,17 +1161,22 @@ namespace RuntimeInspectorNamespace
 #endif
 
 					string assemblyName = assembly.GetName().Name;
-					bool ignoreAssembly = false;
-					for( int i = 0; i < ignoredAssemblies.Length; i++ )
+
+					// Editor-only assemblies can't contribute runtime custom editors
+					if( assemblyName.IndexOf( "Editor", StringComparison.OrdinalIgnoreCase ) >= 0 )
+						continue;
+
+					bool searchAssembly = false;
+					for( int i = 0; i < searchedAssemblies.Length; i++ )
 					{
-						if( caseInsensitiveComparer.IsPrefix( assemblyName, ignoredAssemblies[i], CompareOptions.IgnoreCase ) )
+						if( caseInsensitiveComparer.IsPrefix( assemblyName, searchedAssemblies[i], CompareOptions.IgnoreCase ) )
 						{
-							ignoreAssembly = true;
+							searchAssembly = true;
 							break;
 						}
 					}
 
-					if( ignoreAssembly )
+					if( !searchAssembly )
 						continue;
 
 					try

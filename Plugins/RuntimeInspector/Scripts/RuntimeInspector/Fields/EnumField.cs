@@ -174,7 +174,10 @@ namespace RuntimeInspectorNamespace
 			int single;
 			if( BoundValues.TryGetSingle( out single ) )
 			{
-				input.value = single;
+				// Without notify: a plain value-assignment fired onValueChanged
+				// when a pooled dropdown still carried the previous panel's
+				// selection, running the bound SETTER during panel build.
+				input.SetValueWithoutNotify( single );
 				UpdateMultiValueText( false );
 			}
 			else

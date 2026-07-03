@@ -65,7 +65,11 @@ namespace RuntimeInspectorNamespace
 			bool single;
 			if( BoundValues.TryGetSingle( out single ) )
 			{
-				input.isOn = single;
+				// Without notify: Refresh only mirrors the bound value into the
+				// UI. A plain isOn-assignment fired onValueChanged when a pooled
+				// toggle still carried the previous panel's state, running the
+				// bound SETTER during panel build.
+				input.SetIsOnWithoutNotify( single );
 				SwitchMarks( false );
 			}
 			else
